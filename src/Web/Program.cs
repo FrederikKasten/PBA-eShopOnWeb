@@ -61,6 +61,7 @@ builder.Services.AddScoped<ITokenClaimsService, IdentityTokenClaimService>();
 builder.Configuration.AddEnvironmentVariables();
 builder.Services.AddCoreServices(builder.Configuration);
 builder.Services.AddWebServices(builder.Configuration);
+builder.Services.AddMessaging(builder.Configuration);
 
 // Add memory cache services
 builder.Services.AddMemoryCache();

@@ -8,6 +8,7 @@ services:
       dockerfile: src/Web/Dockerfile
     depends_on:
       - "sqlserver"
+      - "rabbitmq"
   eshoppublicapi:
     image: ${DOCKER_REGISTRY-}eshoppublicapi
     build:
