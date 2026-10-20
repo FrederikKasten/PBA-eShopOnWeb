@@ -8,6 +8,7 @@ services:
       dockerfile: src/Web/Dockerfile
     depends_on:
       - "sqlserver"
+      - "rabbitmq"
   eshoppublicapi:
     image: ${DOCKER_REGISTRY-}eshoppublicapi
     build:
@@ -22,4 +23,8 @@ services:
     environment:
       - SA_PASSWORD=@someThingComplicated1234
       - ACCEPT_EULA=Y
-
+  rabbitmq:
+    image: rabbitmq:4-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
