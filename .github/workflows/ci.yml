@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Cancel an older run on the same branch/PR when a new commit arrives
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  # ---------------------------------------------------------------
+  # 1. Build the whole solution and run every test project
+  # ---------------------------------------------------------------
+  build-and-test:
+    name: Build & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET (version from global.json)
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: '**/*.csproj'
+
+      - name: Restore
+        run: dotnet restore eShopOnWeb.sln
+
+      - name: Build
+        run: dotnet build eShopOnWeb.sln -c Release --no-restore
+
+      - name: Test
+        run: >
+          dotnet test eShopOnWeb.sln -c Release --no-build
+          --logger "trx;LogFilePrefix=results"
+          --collect "XPlat Code Coverage"
+          --results-directory ./TestResults
+
+      - name: Upload test results & coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults
+
+  # ---------------------------------------------------------------
+  # 2. Check that each service's Docker image builds (nothing is pushed).
+  #    Add a matrix entry each time you split out a new microservice.
+  # ---------------------------------------------------------------
+  docker:
+    name: Docker build (${{ matrix.service.name }})
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - name: web
+            dockerfile: src/Web/Dockerfile
+          - name: publicapi
+            dockerfile: src/PublicApi/Dockerfile
+
+          # Example: when you split out a Catalog microservice, uncomment
+          # these two lines and point "dockerfile" at its Dockerfile.
+          # "name" is just a label used in the job name and image tag.
+          # GitHub will then run one more parallel job for this service.
+          #
+          # - name: catalog-api
+          #   dockerfile: src/Services/Catalog.API/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.service.dockerfile }}
+          push: false
+          tags: eshop-${{ matrix.service.name }}:ci
+          cache-from: type=gha,scope=${{ matrix.service.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service.name }}
