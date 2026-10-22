@@ -1,25 +1,78 @@
-version: '3.4'
-
 services:
   eshopwebmvc:
-    image: ${DOCKER_REGISTRY-}eshopwebmvc
+    # Pushed to GitHub Container Registry with `docker compose push`
+    image: ${DOCKER_REGISTRY-ghcr.io/frederikkasten/}eshopwebmvc:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: src/Web/Dockerfile
+      labels:
+        # Links the GHCR package to the GitHub repo
+        org.opencontainers.image.source: https://github.com/FrederikKasten/PBA-eShopOnWeb
     depends_on:
       - "sqlserver"
+      - "logstash"   # so the Serilog TCP sink can resolve "logstash" at startup
   eshoppublicapi:
-    image: ${DOCKER_REGISTRY-}eshoppublicapi
+    image: ${DOCKER_REGISTRY-ghcr.io/frederikkasten/}eshoppublicapi:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: src/PublicApi/Dockerfile
+      labels:
+        org.opencontainers.image.source: https://github.com/FrederikKasten/PBA-eShopOnWeb
     depends_on:
       - "sqlserver"
+      - "logstash"
   sqlserver:
     image: mcr.microsoft.com/azure-sql-edge
     ports:
-      - "1433:1433"
+      # Host port is NOT 1433: a local SQL Server already uses 1433 (and 1434).
+      # The apps still connect to "sqlserver,1433" inside the Docker network.
+      - "${SQL_PORT}:1433"
     environment:
       - SA_PASSWORD=@someThingComplicated1234
       - ACCEPT_EULA=Y
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node          # one node, no cluster discovery
+      - xpack.security.enabled=false        # no TLS / passwords (dev only)
+      - ES_JAVA_OPTS=-Xms${ES_HEAP} -Xmx${ES_HEAP}
+    ports:
+      - "${ES_PORT}:9200"
+    volumes:
+      - es-data:/usr/share/elasticsearch/data   # keeps your data across restarts
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -qE '\"status\":\"(green|yellow)\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:${STACK_VERSION}
+    container_name: logstash
+    environment:
+      - XPACK_MONITORING_ENABLED=false
+      - LS_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "${LOGSTASH_TCP_PORT}:5000"     # JSON lines over TCP (your app / test script)
+      - "${LOGSTASH_BEATS_PORT}:5044"   # Filebeat / other Beats
+    volumes:
+      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:${STACK_VERSION}
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "${KIBANA_PORT}:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+volumes:
+  es-data:
