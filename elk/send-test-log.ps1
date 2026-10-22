@@ -1,7 +1,7 @@
-# Sends a few sample JSON log lines to Logstash on TCP 5000.
+# Sends a few sample JSON log lines to Logstash on TCP 5050 (LOGSTASH_TCP_PORT in .env).
 param(
     [string]$LogstashHost = "localhost",
-    [int]$Port = 5000,
+    [int]$Port = 5050,
     [int]$Count = 5
 )
 

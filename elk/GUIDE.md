@@ -19,7 +19,7 @@ from Prometheus and others in one place, you can add Grafana next to Kibana.
 ## How the pieces fit together
 
 ```
-your app ──JSON/TCP:5000──┐
+your app ──JSON/TCP:5050──┐
                           ├──> Logstash ──> Elasticsearch ──> Kibana (browser :5601)
 Filebeat ──Beats:5044─────┘   (parse/enrich)  (store/search)    (view/dashboards)
 ```
@@ -110,7 +110,7 @@ docker compose logs logstash --tail 20
 .\elk\send-test-log.ps1
 ```
 
-This sends 5 JSON events to Logstash on port 5000. Confirm they arrived in
+This sends 5 JSON events to Logstash on port 5050. Confirm they arrived in
 Elasticsearch:
 
 ```bash
@@ -136,7 +136,8 @@ For eShopOnWeb specifically (Serilog setup, DI, and how to write log
 messages), follow [LOGGING.md](LOGGING.md). The general options are:
 
 **Option A - app sends directly to Logstash (simplest).**
-Configure your logging library to write JSON lines to TCP `localhost:5000`.
+Configure your logging library to write JSON lines to TCP `localhost:5050`
+(or `logstash:5000` from another container in the same compose project).
 Common choices:
 - .NET: Serilog with `Serilog.Sinks.Network` (TCP + JSON formatter)
 - Java: Logback with `logstash-logback-encoder` (`LogstashTcpSocketAppender`)

@@ -12,7 +12,7 @@ picks up once `docker compose up -d elasticsearch logstash kibana` works.
 Your code                         ASP.NET Core             Serilog                 Docker
 ─────────────────────────         ────────────             ───────                 ──────
 _logger.LogInformation(...) ───>  ILogger<T>  ───────────> Console sink  ────────> terminal / VS output
-(ILogger<T> or IAppLogger<T>)     (already in DI)          TCP sink (JSON) ──────> Logstash :5000
+(ILogger<T> or IAppLogger<T>)     (already in DI)          TCP sink (JSON) ──────> Logstash :5050 (host) / :5000 (Docker)
                                                                                      │
                                                                                      v
                                                                                Elasticsearch
@@ -190,11 +190,17 @@ The only thing that differs between environments is **Logstash's address**:
 
 | How the app runs | `ASPNETCORE_ENVIRONMENT` | Settings file | Logstash address |
 |---|---|---|---|
-| From Visual Studio / `dotnet run` | `Development` | `appsettings.Development.json` | `tcp://localhost:5000` |
+| From Visual Studio / `dotnet run` | `Development` | `appsettings.Development.json` | `tcp://localhost:5050` |
 | In Docker Compose | `Docker` (set in `docker-compose.override.yml`) | `appsettings.Docker.json` | `tcp://logstash:5000` |
 
 Inside Docker, `localhost` means *the container itself*. Containers reach
 each other by **service name**, which is why it's `logstash` there.
+
+The ports differ too. Inside Docker, Logstash listens on **5000**. On your PC
+it's published as **5050** (`LOGSTASH_TCP_PORT` in `.env`), because the Web
+project's Visual Studio launch profiles already use `localhost:5000`. If
+both used 5000, starting Web with the containers running would fail with
+"address already in use".
 
 **6a.** In `appsettings.json` of **both** apps, add the shared settings. Set
 `Application` to `"Web"` or `"PublicApi"` so you can tell the two apart in
@@ -227,7 +233,7 @@ for local runs:
 "Serilog": {
   "WriteTo": [
     { "Name": "Console" },
-    { "Name": "TCPSink", "Args": { "uri": "tcp://localhost:5000" } }
+    { "Name": "TCPSink", "Args": { "uri": "tcp://localhost:5050" } }
   ]
 }
 ```

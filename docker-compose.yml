@@ -55,7 +55,7 @@ services:
       - XPACK_MONITORING_ENABLED=false
       - LS_JAVA_OPTS=-Xms512m -Xmx512m
     ports:
-      - "${LOGSTASH_TCP_PORT}:5000"     # JSON lines over TCP (your app / test script)
+      - "${LOGSTASH_TCP_PORT}:5000"     # JSON lines over TCP; host 5050 (VS / test script), logstash:5000 inside Docker
       - "${LOGSTASH_BEATS_PORT}:5044"   # Filebeat / other Beats
     volumes:
       - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
