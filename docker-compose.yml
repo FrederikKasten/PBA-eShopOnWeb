@@ -9,6 +9,7 @@ services:
     depends_on:
       - "sqlserver"
       - "rabbitmq"
+      - "orderingapi"
   eshoppublicapi:
     image: ${DOCKER_REGISTRY-}eshoppublicapi
     build:
@@ -28,3 +29,10 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+  orderingapi:
+    image: ${DOCKER_REGISTRY-}orderingapi
+    build:
+      context: .
+      dockerfile: src/Services/Ordering.API/Dockerfile
+    depends_on:
+      - "rabbitmq"

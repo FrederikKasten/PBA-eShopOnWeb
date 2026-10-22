@@ -1,11 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Ardalis.Specification;
-using Microsoft.eShopWeb.ApplicationCore.Entities.OrderAggregate;
-using Microsoft.eShopWeb.ApplicationCore.Interfaces;
-using Microsoft.eShopWeb.ApplicationCore.Specifications;
 using Microsoft.eShopWeb.Web.Features.OrderDetails;
+using Microsoft.eShopWeb.Web.Interfaces;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Xunit;
 
@@ -13,15 +12,15 @@ namespace Microsoft.eShopWeb.UnitTests.MediatorHandlers.OrdersTests;
 
 public class GetOrderDetails
 {
-    private readonly IReadRepository<Order> _mockOrderRepository =  Substitute.For<IReadRepository<Order>>();
-    
+    private readonly IOrderingApiClient _mockOrderingApi = Substitute.For<IOrderingApiClient>();
+
     public GetOrderDetails()
     {
-        var item = new OrderItem(new CatalogItemOrdered(1, "ProductName", "URI"), 10.00m, 10);
-        var address = new Address("", "", "", "", "");
-        Order order = new Order("buyerId", address, new List<OrderItem> { item });
-                
-        _mockOrderRepository.FirstOrDefaultAsync(Arg.Any<OrderWithItemsByIdSpec>(), default)
+        var address = new OrderingApiAddress("", "", "", "", "");
+        var lines = new List<OrderingApiOrderLine> { new OrderingApiOrderLine(1, "ProductName", "URI", 10.00m, 10) };
+        var order = new OrderingApiOrderDetails(0, "SomeUserName", DateTimeOffset.Now, 100m, "Received", address, lines);
+
+        _mockOrderingApi.GetOrderAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(order);
     }
 
@@ -30,10 +29,22 @@ public class GetOrderDetails
     {
         var request = new eShopWeb.Web.Features.OrderDetails.GetOrderDetails("SomeUserName", 0);
 
-        var handler = new GetOrderDetailsHandler(_mockOrderRepository);
+        var handler = new GetOrderDetailsHandler(_mockOrderingApi, NullLogger<GetOrderDetailsHandler>.Instance);
 
         var result = await handler.Handle(request, CancellationToken.None);
 
         Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task BeNullIfOrderBelongsToAnotherUser()
+    {
+        var request = new eShopWeb.Web.Features.OrderDetails.GetOrderDetails("AnotherUser", 0);
+
+        var handler = new GetOrderDetailsHandler(_mockOrderingApi, NullLogger<GetOrderDetailsHandler>.Instance);
+
+        var result = await handler.Handle(request, CancellationToken.None);
+
+        Assert.Null(result);
     }
 }

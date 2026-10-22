@@ -13,6 +13,14 @@ public static class ConfigureWebServices
         services.AddScoped<IBasketViewModelService, BasketViewModelService>();
         services.AddScoped<CatalogViewModelService>();
         services.AddScoped<ICatalogItemViewModelService, CatalogItemViewModelService>();
+
+        // HttpClient for Ordering.API. Adresse is in appsettings (OrderingApi:BaseUrl).
+        services.AddHttpClient<IOrderingApiClient, OrderingApiClient>(client =>
+        {
+            client.BaseAddress = new Uri(configuration["OrderingApi:BaseUrl"] ?? "http://localhost:5300/");
+            client.Timeout = TimeSpan.FromSeconds(5);
+            // Timeout is set to 5 seconds. If the Ordering.API does not respond within this time, a timeout exception will be thrown.
+        });
         services.Configure<CatalogSettings>(configuration);
         services.AddScoped<ICatalogViewModelService, CachedCatalogViewModelService>();
 
