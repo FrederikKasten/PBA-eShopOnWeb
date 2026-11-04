@@ -11,6 +11,8 @@ services:
     depends_on:
       - "sqlserver"
       - "logstash"   # so the Serilog TCP sink can resolve "logstash" at startup
+      - "rabbitmq"
+      - "orderingapi"
   eshoppublicapi:
     image: ${DOCKER_REGISTRY-ghcr.io/frederikkasten/}eshoppublicapi:${IMAGE_TAG:-latest}
     build:
@@ -76,3 +78,15 @@ services:
 
 volumes:
   es-data:
+  rabbitmq:
+    image: rabbitmq:4-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+  orderingapi:
+    image: ${DOCKER_REGISTRY-}orderingapi
+    build:
+      context: .
+      dockerfile: src/Services/Ordering.API/Dockerfile
+    depends_on:
+      - "rabbitmq"
