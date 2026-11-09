@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.0.31903.59
+# Visual Studio Version 18
+VisualStudioVersion = 18.10.12210.168 stable
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{8FF16BDB-352E-42A2-A25F-0B5BC3A17FD7}"
 EndProject
@@ -29,6 +29,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UnitTests", "tests\UnitTest
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7EFE7D65-5C2D-4D83-B034-D06B2D37564E}"
 	ProjectSection(SolutionItems) = preProject
+		docker-compose.yml = docker-compose.yml
 		README.md = README.md
 	EndProjectSection
 EndProject
@@ -93,5 +94,8 @@ Global
 		{D6829485-DD9C-42CE-BEDE-4EB0E81021AC} = {BAA5312D-B54C-42D6-A3B9-504DD12F8250}
 		{698594AE-78D3-429F-B5CC-3A6F6BCE397A} = {BAA5312D-B54C-42D6-A3B9-504DD12F8250}
 		{EAD6CF0B-2979-462C-BBB9-AF723B1EB570} = {BAA5312D-B54C-42D6-A3B9-504DD12F8250}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {94CBC694-5129-4F92-AC08-24E2BD6C01F9}
 	EndGlobalSection
 EndGlobal

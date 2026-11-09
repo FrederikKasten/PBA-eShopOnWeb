@@ -1,10 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Ardalis.Specification;
-using Microsoft.eShopWeb.ApplicationCore.Entities.OrderAggregate;
-using Microsoft.eShopWeb.ApplicationCore.Interfaces;
 using Microsoft.eShopWeb.Web.Features.MyOrders;
+using Microsoft.eShopWeb.Web.Interfaces;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Xunit;
 
@@ -12,15 +13,18 @@ namespace Microsoft.eShopWeb.UnitTests.MediatorHandlers.OrdersTests;
 
 public class GetMyOrders
 {
-    private readonly IReadRepository<Order> _mockOrderRepository = Substitute.For<IReadRepository<Order>>();
+    private readonly IOrderingApiClient _mockOrderingApi = Substitute.For<IOrderingApiClient>();
 
     public GetMyOrders()
     {
-        var item = new OrderItem(new CatalogItemOrdered(1, "ProductName", "URI"), 10.00m, 10);
-        var address = new Address("", "", "", "", "");
-        Order order = new Order("buyerId", address, new List<OrderItem> { item });
-              
-        _mockOrderRepository.ListAsync(Arg.Any<ISpecification<Order>>(), default).Returns(new List<Order> { order });
+        var address = new OrderingApiAddress("", "", "", "", "");
+        IReadOnlyList<OrderingApiOrderSummary> orders = new List<OrderingApiOrderSummary>
+        {
+            new OrderingApiOrderSummary(1, "SomeUserName", DateTimeOffset.Now, 100m, "Received", address)
+        };
+
+        _mockOrderingApi.GetOrdersForBuyerAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(orders);
     }
 
     [Fact]
@@ -28,10 +32,12 @@ public class GetMyOrders
     {
         var request = new eShopWeb.Web.Features.MyOrders.GetMyOrders("SomeUserName");
 
-        var handler = new GetMyOrdersHandler(_mockOrderRepository);
+        var handler = new GetMyOrdersHandler(_mockOrderingApi, NullLogger<GetMyOrdersHandler>.Instance);
 
         var result = await handler.Handle(request, CancellationToken.None);
 
         Assert.NotNull(result);
+        Assert.Single(result);
+        Assert.Equal("Received", result.First().Status);
     }
 }
