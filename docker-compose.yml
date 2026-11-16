@@ -44,8 +44,8 @@ services:
     ports:
       # Kun til denne maskine (127.0.0.1): services, man kører lokalt med dotnet run, kan stadig forbinde,
       # men andre på netværket kan ikke sende beskeder til køerne. Inde i Docker bruges rabbitmq:5672.
-      - "127.0.0.1:5672:5672"
-      - "127.0.0.1:15672:15672"
+      - "127.0.0.1:5673:5672"
+      - "127.0.0.1:15673:15672"
 
   orderingapi:
     image: ${DOCKER_REGISTRY-}orderingapi
