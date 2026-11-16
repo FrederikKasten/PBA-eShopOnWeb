@@ -5,8 +5,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.eShopWeb.ApplicationCore.Interfaces;
+//using Microsoft.eShopWeb.ApplicationCore.Interfaces;
 using Microsoft.eShopWeb.Infrastructure.Identity;
+using MassTransit;
+using Microsoft.eShopWeb.Web.Interfaces;
 
 namespace Microsoft.eShopWeb.Web.Areas.Identity.Pages.Account;
 
@@ -15,13 +17,14 @@ public class LoginModel : PageModel
 {
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly ILogger<LoginModel> _logger;
-    private readonly IBasketService _basketService;
+    //private readonly IBasketService _basketService;
+    IBasketClient _basketClient;
 
-    public LoginModel(SignInManager<ApplicationUser> signInManager, ILogger<LoginModel> logger, IBasketService basketService)
+    public LoginModel(SignInManager<ApplicationUser> signInManager, ILogger<LoginModel> logger, IBasketClient basketClient)
     {
         _signInManager = signInManager;
         _logger = logger;
-        _basketService = basketService;
+        _basketClient = basketClient;
     }
 
     [BindProperty]
@@ -111,7 +114,18 @@ public class LoginModel : PageModel
             if (Guid.TryParse(anonymousId, out var _))
             {
                 Guard.Against.NullOrEmpty(userName, nameof(userName));
-                await _basketService.TransferBasketAsync(anonymousId, userName);
+                try
+                {
+                    // Request-Reply: login venter på svaret, fordi brugeren ofte sendes direkte videre til checkout,
+                    // og der skal den anonyme kurv allerede være flyttet.
+                    await _basketClient.TransferBasketAsync(anonymousId, userName);
+                }
+                catch (Exception ex) when (ex is MassTransitException or OperationCanceledException)
+                {
+                    // Login skal ikke fejle, fordi Basket.API eller RabbitMQ er nede. Den anonyme kurv bliver bare ikke flyttet.
+                    // Brugernavnet (e-mail) logges ikke; exception'en siger hvad der gik galt.
+                    _logger.LogWarning(ex, "Could not transfer the anonymous basket at login; the user continues without it");
+                }
             }
             Response.Cookies.Delete(Constants.BASKET_COOKIENAME);
         }

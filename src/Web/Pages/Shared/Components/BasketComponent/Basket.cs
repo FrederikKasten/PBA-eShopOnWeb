@@ -32,10 +32,13 @@ public class Basket : ViewComponent
 
     private async Task<int> CountTotalBasketItems()
     {
+        // Sat af checkout lige før redirect til Success. TempData læses kun én gang, så det gælder kun den første side.
+        var placedOrderId = TempData[Constants.PLACED_ORDER_ID] as int?;
+
         if (_signInManager.IsSignedIn(HttpContext.User))
         {
             Guard.Against.Null(User?.Identity?.Name, nameof(User.Identity.Name));
-            return await _basketService.CountTotalBasketItems(User.Identity.Name);
+            return await _basketService.CountTotalBasketItems(User.Identity.Name, placedOrderId);
         }
 
         string? anonymousId = GetAnnonymousIdFromCookie();

@@ -81,6 +81,9 @@ jobs:
           - name: publicapi
             image: eshoppublicapi
             dockerfile: src/PublicApi/Dockerfile
+          - name: basket-api
+            image: basketapi
+            dockerfile: src/Services/Basket.API/Dockerfile
 
           # Example: when you split out a Catalog microservice, uncomment
           # these three lines and point "dockerfile" at its Dockerfile.
