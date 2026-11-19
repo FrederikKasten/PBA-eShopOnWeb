@@ -56,7 +56,7 @@ public class OrderCreatedPublisher : IOrderCreatedPublisher
         catch (Exception ex)
         {
             _logger.LogError(ex,
-                "Kunne ikke publicere OrderCreated for ordre {OrderId}. Ordren er gemt i monolitten, men Ordering.API får ikke besked.",
+                "Kunne ikke publicere OrderCreated for ordre {OrderId}. Ordren er gemt i monolitten, men Ordering.API og Basket.API får ikke besked (kurven tømmes ikke).",
                 order.Id);
         }
     }

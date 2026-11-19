@@ -1,4 +1,6 @@
 ﻿using System;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.eShopWeb.Web.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -49,6 +51,18 @@ public class TestApplication : WebApplicationFactory<IBasketViewModelService>
                 .UseApplicationServiceProvider(sp)
                 .Options;
             });
+
+            // Basket.API og RabbitMQ kører ikke under testene – brug en in-memory udgave af klienten i stedet.
+            services.RemoveAll<IBasketClient>();
+            services.AddSingleton<IBasketClient, InMemoryBasketClient>();
+
+            // OutboxDispatcher ville prøve at sende til RabbitMQ, som ikke kører. Uden den bliver beskederne
+            // liggende i OutboxMessages, hvor testene kan se dem.
+            // (IsKeyedService først: ImplementationType kaster en exception på keyed services i .NET 8.)
+            foreach (var dispatcher in services.Where(d => !d.IsKeyedService && d.ImplementationType == typeof(OutboxDispatcher)).ToList())
+            {
+                services.Remove(dispatcher);
+            }
         });
 
         return base.CreateHost(builder);

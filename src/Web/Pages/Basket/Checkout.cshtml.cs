@@ -8,33 +8,35 @@ using Microsoft.eShopWeb.ApplicationCore.Exceptions;
 using Microsoft.eShopWeb.ApplicationCore.Interfaces;
 using Microsoft.eShopWeb.Infrastructure.Identity;
 using Microsoft.eShopWeb.Web.Interfaces;
+using Contracts;
 
 namespace Microsoft.eShopWeb.Web.Pages.Basket;
 
 [Authorize]
 public class CheckoutModel : PageModel
 {
-    private readonly IBasketService _basketService;
+    //private readonly IBasketService _basketService;
+    private readonly IBasketClient _basketClient;
     private readonly SignInManager<ApplicationUser> _signInManager;
-    private readonly IOrderService _orderService;
+    private readonly IOrderPlacementService _orderPlacement;
     private string? _username = null;
     private readonly IBasketViewModelService _basketViewModelService;
-    private readonly IAppLogger<CheckoutModel> _logger;
-    private readonly IOrderCreatedPublisher _orderCreatedPublisher;
+    // ILogger<T> i stedet for IAppLogger<T>: Web-klasser bruger ILogger<T> 
+    //private readonly IAppLogger<CheckoutModel> _logger;
+    private readonly ILogger<CheckoutModel> _logger;
+    //private readonly IOrderCreatedPublisher _orderCreatedPublisher;
 
-    public CheckoutModel(IBasketService basketService,
-        IBasketViewModelService basketViewModelService,
-        SignInManager<ApplicationUser> signInManager,
-        IOrderService orderService,
-        IAppLogger<CheckoutModel> logger,
-        IOrderCreatedPublisher orderCreatedPublisher)
+    public CheckoutModel(IBasketClient basketClient,
+            IBasketViewModelService basketViewModelService,
+            SignInManager<ApplicationUser> signInManager,
+            IOrderPlacementService orderPlacement,
+            ILogger<CheckoutModel> logger)
     {
-        _basketService = basketService;
+        _basketClient = basketClient;
         _signInManager = signInManager;
-        _orderService = orderService;
+        _orderPlacement = orderPlacement;
         _basketViewModelService = basketViewModelService;
         _logger = logger;
-        _orderCreatedPublisher = orderCreatedPublisher;
     }
 
     public BasketViewModel BasketModel { get; set; } = new BasketViewModel();
@@ -55,16 +57,31 @@ public class CheckoutModel : PageModel
                 return BadRequest();
             }
 
-            var updateModel = items.ToDictionary(b => b.Id.ToString(), b => b.Quantity);
-            await _basketService.SetQuantities(BasketModel.Id, updateModel);
-            var order = await _orderService.CreateOrderAsync(BasketModel.Id, new Address("123 Main St.", "Kent", "OH", "United States", "44240"));
-            await _orderCreatedPublisher.PublishAsync(order);
-            await _basketService.DeleteBasketAsync(BasketModel.Id);
+            var quantities = items.Select(b => new BasketQuantity { BasketItemId = b.Id, Quantity = b.Quantity }).ToList();
+
+            // 1) Request-Reply: gem de endelige antal i Basket.API og få den opdaterede kurv tilbage.
+            var basket = await _basketClient.SetQuantitiesAsync(BasketModel.Id, quantities);
+
+            // 2) Lav ordren ud fra kurvens linjer. Tom/ingen kurv giver EmptyBasketOnCheckoutException (fanges nedenfor).
+            var orderItems = basket?.Items
+                .Select(i => new OrderItemRequest(i.CatalogItemId, i.UnitPrice, i.Quantity))
+                .ToList() ?? new List<OrderItemRequest>();
+
+            // 3) Transactional Outbox: ordren og OrderCreated gemmes i samme transaktion. OutboxDispatcher publicerer
+            //    beskeden bagefter (Publish-Subscribe) til både Ordering.API og Basket.API, som selv trækker varerne fra kurven.
+            var order = await _orderPlacement.PlaceOrderAsync(BasketModel.BuyerId!, orderItems,
+                new Address("123 Main St.", "Kent", "OH", "United States", "44240"));
+            _logger.LogInformation("Order {OrderId} created from basket {BasketId} with {LineCount} lines",
+                order.Id, BasketModel.Id, orderItems.Count);
+
+            // 4) Read-your-writes: næste side (Success) beder Basket.API om at svare først, når ordren er trukket fra kurven,
+            //    så kurv-ikonet ikke viser de varer, der lige er købt.
+            TempData[Constants.PLACED_ORDER_ID] = order.Id;
         }
-        catch (EmptyBasketOnCheckoutException emptyBasketOnCheckoutException)
+        catch (EmptyBasketOnCheckoutException)
         {
             //Redirect to Empty Basket page
-            _logger.LogWarning(emptyBasketOnCheckoutException.Message);
+            _logger.LogWarning("Checkout stopped: basket {BasketId} is empty", BasketModel.Id);
             return RedirectToPage("/Basket/Index");
         }
 
