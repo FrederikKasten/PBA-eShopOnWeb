@@ -66,6 +66,17 @@ services:
       - "rabbitmq"   # requests from Web and OrderCreated arrive through RabbitMQ
       - "logstash"   # so the Serilog TCP sink can resolve "logstash" at startup
 
+  inventoryapi:
+    image: ${DOCKER_REGISTRY-ghcr.io/frederikkasten/}inventoryapi:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: src/Services/Inventory.API/Dockerfile
+      labels:
+        org.opencontainers.image.source: https://github.com/FrederikKasten/PBA-eShopOnWeb
+    depends_on:
+      - "rabbitmq"   # ReserveStock and OrderCancelled arrive through RabbitMQ
+      - "logstash"   # so the Serilog TCP sink can resolve "logstash" at startup
+
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
     container_name: elasticsearch

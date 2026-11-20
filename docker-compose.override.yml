@@ -52,6 +52,22 @@ services:
     volumes:
       - basket-data:/app/data
 
+  inventoryapi:
+    environment:
+      # "Docker" gør, at appsettings.Docker.json sender logs til logstash:5000.
+      - ASPNETCORE_ENVIRONMENT=Docker
+      - ASPNETCORE_URLS=http://+:8080
+      - RabbitMq__Host=rabbitmq
+      - RabbitMq__Username=${RABBITMQ_USER:-guest}
+      - RabbitMq__Password=${RABBITMQ_PASSWORD:-guest}
+      - ConnectionStrings__InventoryDb=Data Source=/app/data/inventory.db
+    ports:
+      # Kun til test fra denne maskine. Endpoints kræver desuden et JWT fra PublicApi.
+      - "127.0.0.1:5500:8080"
+    volumes:
+      - inventory-data:/app/data
+
 volumes:
   ordering-data:
   basket-data:
+  inventory-data:
