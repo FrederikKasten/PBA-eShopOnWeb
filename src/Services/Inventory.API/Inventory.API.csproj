@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <!-- Til "dotnet ef migrations add" (Data/Migrations). Kommer ikke med i det byggede program. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <!-- HTTP-endpoints kræver et JWT fra PublicApi (samme pakke og version som Basket.API). -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <!-- RabbitMQ via MassTransit (samme pakke og version som de andre services). -->
+    <PackageReference Include="MassTransit.RabbitMQ" />
+    <!-- Logning til konsol + Logstash (se elk/LOGGING.md). -->
+    <PackageReference Include="Serilog.AspNetCore" />
+    <PackageReference Include="Serilog.Sinks.Network" />
+    <!-- OpenAPI-beskrivelse og Swagger UI (samme pakke og version som PublicApi). -->
+    <PackageReference Include="Swashbuckle.AspNetCore" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Beskederne (Canonical Data Model), som de andre services også bruger. -->
+    <ProjectReference Include="../../Contracts/Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

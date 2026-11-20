@@ -12,7 +12,7 @@ public static class OrderCreatedMapper
             BuyerId = message.BuyerId,
             OrderDate = message.OrderDate,
             Total = message.Total,
-            Status = OrderStatus.Received,
+            Status = OrderStatus.AwaitingStock,
             ShipToStreet = message.ShipToAddress.Street,
             ShipToCity = message.ShipToAddress.City,
             ShipToState = message.ShipToAddress.State,
@@ -26,6 +26,21 @@ public static class OrderCreatedMapper
                 UnitPrice = line.UnitPrice,
                 Units = line.Units
             }).ToList()
+        };
+    }
+
+    /// <summary>
+    /// Content Filter: lageret får kun ordrens id og linjernes katalog-id og antal –
+    /// ikke adresse, priser eller navne.
+    /// </summary>
+    public static ReserveStock ToReserveStock(Order order)
+    {
+        return new ReserveStock
+        {
+            OrderId = order.Id,
+            Lines = order.Lines
+                .Select(line => new ReserveStockLine { CatalogItemId = line.CatalogItemId, Units = line.Units })
+                .ToList()
         };
     }
 }

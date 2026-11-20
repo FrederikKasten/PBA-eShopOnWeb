@@ -84,6 +84,12 @@ jobs:
           - name: basket-api
             image: basketapi
             dockerfile: src/Services/Basket.API/Dockerfile
+          - name: ordering-api
+            image: orderingapi
+            dockerfile: src/Services/Ordering.API/Dockerfile
+          - name: inventory-api
+            image: inventoryapi
+            dockerfile: src/Services/Inventory.API/Dockerfile
 
           # Example: when you split out a Catalog microservice, uncomment
           # these three lines and point "dockerfile" at its Dockerfile.
