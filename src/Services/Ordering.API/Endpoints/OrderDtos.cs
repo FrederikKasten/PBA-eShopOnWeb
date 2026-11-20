@@ -23,6 +23,7 @@ public record OrderDetailsDto(
     decimal Total,
     string Status,
     AddressDto ShipToAddress,
-    List<OrderLineDto> Lines);
+    List<OrderLineDto> Lines,
+    string? RejectionReason);
 
-public record OrderStatusDto(int OrderId, string Status);
+public record OrderStatusDto(int OrderId, string Status, string? RejectionReason);

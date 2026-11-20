@@ -1,13 +1,22 @@
-﻿using Microsoft.AspNetCore.Mvc.Testing;
+﻿using Contracts;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.eShopWeb.Infrastructure.Data;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Microsoft.eShopWeb.FunctionalTests.Web.Pages.Basket;
 
+
 [Collection("Sequential")]
 public class CheckoutTest : IClassFixture<TestApplication>
 {
+
+    private readonly TestApplication _factory;
+
     public CheckoutTest(TestApplication factory)
     {
+        _factory = factory;
         Client = factory.CreateClient(new WebApplicationFactoryClientOptions
         {
             AllowAutoRedirect = true
@@ -58,11 +67,23 @@ public class CheckoutTest : IClassFixture<TestApplication>
             new KeyValuePair<string, string>("Items[0].Quantity", "1"),
             new KeyValuePair<string, string>(WebPageHelpers.TokenTag, WebPageHelpers.GetRequestVerificationToken(loginStringResponse))
         };
-        var checkOutContent = new FormUrlEncodedContent(checkOutKeyValues);     
+        var checkOutContent = new FormUrlEncodedContent(checkOutKeyValues);
+        var outboxCountBefore = await CountOrderCreatedInOutbox();
         var checkOutResponse = await Client.PostAsync("/basket/checkout", checkOutContent);
         var stringCheckOutResponse = await checkOutResponse.Content.ReadAsStringAsync();
 
         Assert.Contains("/Basket/Success", checkOutResponse.RequestMessage!.RequestUri!.ToString());
         Assert.Contains("Thanks for your Order!", stringCheckOutResponse);
+
+        // Transactional Outbox: OrderCreated er gemt sammen med ordren og venter på OutboxDispatcher.
+        Assert.Equal(outboxCountBefore + 1, await CountOrderCreatedInOutbox());
+    }
+
+    private async Task<int> CountOrderCreatedInOutbox()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<CatalogContext>();
+        return await db.OutboxMessages.CountAsync(m => m.MessageType == typeof(OrderCreated).FullName);
     }
 }
+

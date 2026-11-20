@@ -8,6 +8,8 @@
 
   <ItemGroup>
     <PackageReference Include="MassTransit.RabbitMQ" />
+    <!-- POST /orders/{id}/cancel kræver et JWT fra PublicApi (samme pakke og version som Basket.API). -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
   </ItemGroup>
 

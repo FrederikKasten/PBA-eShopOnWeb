@@ -11,7 +11,10 @@ public class Order
     public string BuyerId { get; set; } = string.Empty;
     public DateTimeOffset OrderDate { get; set; }
     public decimal Total { get; set; }
-    public string Status { get; set; } = OrderStatus.Received;
+    public string Status { get; set; } = OrderStatus.AwaitingStock;
+
+    /// <summary>Hvorfor lageret afviste ordren, fx "Roslyn Red Sheet: ordered 3, available 2". Ellers null.</summary>
+    public string? RejectionReason { get; set; }
 
     public string ShipToStreet { get; set; } = string.Empty;
     public string ShipToCity { get; set; } = string.Empty;

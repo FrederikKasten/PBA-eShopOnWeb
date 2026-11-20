@@ -1,11 +1,11 @@
-version: '3.4'
-
 services:
   eshopwebmvc:
     environment:
       - ASPNETCORE_ENVIRONMENT=Docker
       - ASPNETCORE_URLS=http://+:8080
       - RabbitMq__Host=rabbitmq
+      - RabbitMq__Username=${RABBITMQ_USER:-guest}
+      - RabbitMq__Password=${RABBITMQ_PASSWORD:-guest}
       - OrderingApi__BaseUrl=http://orderingapi:8080/
     ports:
       - "5106:8080"
@@ -28,11 +28,46 @@ services:
       - ASPNETCORE_ENVIRONMENT=Docker
       - ASPNETCORE_URLS=http://+:8080
       - RabbitMq__Host=rabbitmq
+      - RabbitMq__Username=${RABBITMQ_USER:-guest}
+      - RabbitMq__Password=${RABBITMQ_PASSWORD:-guest}
       - ConnectionStrings__OrderingDb=Data Source=/app/data/ordering.db
     ports:
       - "5300:8080"
     volumes:
       - ordering-data:/app/data
 
+  basketapi:
+    environment:
+      # "Docker" gør, at appsettings.Docker.json sender logs til logstash:5000.
+      - ASPNETCORE_ENVIRONMENT=Docker
+      - ASPNETCORE_URLS=http://+:8080
+      - RabbitMq__Host=rabbitmq
+      - RabbitMq__Username=${RABBITMQ_USER:-guest}
+      - RabbitMq__Password=${RABBITMQ_PASSWORD:-guest}
+      - ConnectionStrings__BasketDb=Data Source=/app/data/basket.db
+    ports:
+      # Kun til test med curl fra denne maskine (127.0.0.1). Endpoints kræver desuden et JWT fra PublicApi.
+      # Den kommende API Gateway når Basket.API inde i Docker-netværket på basketapi:8080.
+      - "127.0.0.1:5400:8080"
+    volumes:
+      - basket-data:/app/data
+
+  inventoryapi:
+    environment:
+      # "Docker" gør, at appsettings.Docker.json sender logs til logstash:5000.
+      - ASPNETCORE_ENVIRONMENT=Docker
+      - ASPNETCORE_URLS=http://+:8080
+      - RabbitMq__Host=rabbitmq
+      - RabbitMq__Username=${RABBITMQ_USER:-guest}
+      - RabbitMq__Password=${RABBITMQ_PASSWORD:-guest}
+      - ConnectionStrings__InventoryDb=Data Source=/app/data/inventory.db
+    ports:
+      # Kun til test fra denne maskine. Endpoints kræver desuden et JWT fra PublicApi.
+      - "127.0.0.1:5500:8080"
+    volumes:
+      - inventory-data:/app/data
+
 volumes:
   ordering-data:
+  basket-data:
+  inventory-data:

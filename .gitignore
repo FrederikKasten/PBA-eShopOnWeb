@@ -261,3 +261,5 @@ pub/
 
 .azure
 ordering.db*
+basket.db*
+inventory.db*
